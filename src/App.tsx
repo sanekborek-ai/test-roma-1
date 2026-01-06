@@ -7,6 +7,11 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import type {
+  DragEndEvent,
+  DragStartEvent,
+  UniqueIdentifier,
+} from "@dnd-kit/core";
 import {
   SortableContext,
   arrayMove,
@@ -19,14 +24,55 @@ import clsx from "clsx";
 
 const STORAGE_KEY = "flowboard-data-v2";
 
-const LABELS = [
+type Label = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+type ChecklistItem = {
+  id: string;
+  text: string;
+  done: boolean;
+};
+
+type Card = {
+  id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  labels: string[];
+  checklist: ChecklistItem[];
+};
+
+type Column = {
+  id: string;
+  title: string;
+  cards: Card[];
+};
+
+type Board = {
+  columns: Column[];
+};
+
+type ActiveCardState = {
+  columnId: string;
+  cardId: string;
+};
+
+type DragData = {
+  type: "column" | "card";
+  columnId?: string;
+};
+
+const LABELS: Label[] = [
   { id: "important", name: "Важно", color: "#ff6b6b" },
   { id: "feature", name: "Фича", color: "#6b9bff" },
   { id: "mobile", name: "Mobile", color: "#6bffb3" },
   { id: "research", name: "R&D", color: "#ffd56b" },
 ];
 
-const defaultBoard = () => ({
+const defaultBoard = (): Board => ({
   columns: [
     {
       id: crypto.randomUUID(),
@@ -76,22 +122,22 @@ const defaultBoard = () => ({
   ],
 });
 
-const loadBoard = () => {
+const loadBoard = (): Board => {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return defaultBoard();
   try {
-    return JSON.parse(raw);
+    return JSON.parse(raw) as Board;
   } catch (error) {
     console.error("Не удалось загрузить данные", error);
     return defaultBoard();
   }
 };
 
-const saveBoard = (board) => {
+const saveBoard = (board: Board) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(board));
 };
 
-const createCard = () => ({
+const createCard = (): Card => ({
   id: crypto.randomUUID(),
   title: "Новая карточка",
   description: "",
@@ -100,22 +146,24 @@ const createCard = () => ({
   checklist: [],
 });
 
-const createColumn = () => ({
+const createColumn = (): Column => ({
   id: crypto.randomUUID(),
   title: "Новая колонка",
   cards: [],
 });
 
-const findColumnByCardId = (columns, cardId) =>
+const findColumnByCardId = (columns: Column[], cardId: string) =>
   columns.find((column) => column.cards.some((card) => card.id === cardId));
 
-const getCardById = (columns, cardId) =>
+const getCardById = (columns: Column[], cardId: string) =>
   columns.flatMap((column) => column.cards).find((card) => card.id === cardId);
 
 export default function App() {
-  const [board, setBoard] = useState(() => loadBoard());
-  const [activeDrag, setActiveDrag] = useState(null);
-  const [activeCard, setActiveCard] = useState(null);
+  const [board, setBoard] = useState<Board>(() => loadBoard());
+  const [activeDrag, setActiveDrag] = useState<DragStartEvent["active"] | null>(
+    null
+  );
+  const [activeCard, setActiveCard] = useState<ActiveCardState | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -126,7 +174,7 @@ export default function App() {
   const columns = board.columns;
   const columnIds = useMemo(() => columns.map((column) => column.id), [columns]);
 
-  const updateBoard = (updater) => {
+  const updateBoard = (updater: Board | ((prev: Board) => Board)) => {
     setBoard((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
       saveBoard(next);
@@ -149,7 +197,7 @@ export default function App() {
     }
   };
 
-  const handleColumnTitleChange = (columnId, value) => {
+  const handleColumnTitleChange = (columnId: string, value: string) => {
     updateBoard((prev) => ({
       ...prev,
       columns: prev.columns.map((column) =>
@@ -158,7 +206,7 @@ export default function App() {
     }));
   };
 
-  const handleRemoveColumn = (columnId) => {
+  const handleRemoveColumn = (columnId: string) => {
     if (!confirm("Удалить колонку и все карточки?")) return;
     updateBoard((prev) => ({
       ...prev,
@@ -166,7 +214,7 @@ export default function App() {
     }));
   };
 
-  const handleAddCard = (columnId) => {
+  const handleAddCard = (columnId: string) => {
     updateBoard((prev) => ({
       ...prev,
       columns: prev.columns.map((column) =>
@@ -177,7 +225,7 @@ export default function App() {
     }));
   };
 
-  const handleRemoveCard = (columnId, cardId) => {
+  const handleRemoveCard = (columnId: string, cardId: string) => {
     if (!confirm("Удалить карточку?")) return;
     updateBoard((prev) => ({
       ...prev,
@@ -192,7 +240,11 @@ export default function App() {
     }));
   };
 
-  const handleCardUpdate = (columnId, cardId, updater) => {
+  const handleCardUpdate = (
+    columnId: string,
+    cardId: string,
+    updater: (prev: Card) => Card
+  ) => {
     updateBoard((prev) => ({
       ...prev,
       columns: prev.columns.map((column) => {
@@ -207,16 +259,16 @@ export default function App() {
     }));
   };
 
-  const onDragStart = ({ active }) => {
+  const onDragStart = ({ active }: DragStartEvent) => {
     setActiveDrag(active);
   };
 
-  const onDragEnd = ({ active, over }) => {
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveDrag(null);
     if (!over) return;
 
-    const activeType = active.data.current?.type;
-    const overType = over.data.current?.type;
+    const activeType = active.data.current?.type as DragData["type"] | undefined;
+    const overType = over.data.current?.type as DragData["type"] | undefined;
 
     if (activeType === "column" && overType === "column") {
       const activeIndex = columns.findIndex((column) => column.id === active.id);
@@ -231,11 +283,11 @@ export default function App() {
     }
 
     if (activeType === "card") {
-      const activeColumn = findColumnByCardId(columns, active.id);
+      const activeColumn = findColumnByCardId(columns, String(active.id));
       const overColumn =
         overType === "column"
           ? columns.find((column) => column.id === over.id)
-          : findColumnByCardId(columns, over.id);
+          : findColumnByCardId(columns, String(over.id));
 
       if (!activeColumn || !overColumn) return;
 
@@ -261,6 +313,7 @@ export default function App() {
           }
           if (column.id === overColumn.id) {
             const cardToMove = activeColumn.cards[activeIndex];
+            if (!cardToMove) return column;
             const updatedCards = [...column.cards];
             updatedCards.splice(adjustedIndex, 0, cardToMove);
             return { ...column, cards: updatedCards };
@@ -272,9 +325,10 @@ export default function App() {
     }
   };
 
-  const activeCardData = activeDrag?.data.current?.type === "card"
-    ? getCardById(columns, activeDrag.id)
-    : null;
+  const activeCardData =
+    activeDrag?.data.current?.type === "card"
+      ? getCardById(columns, String(activeDrag.id))
+      : null;
 
   return (
     <div className="app">
@@ -283,7 +337,8 @@ export default function App() {
           <p className="eyebrow">Командная доска</p>
           <h1>FlowBoard</h1>
           <p className="subtitle">
-            Полноценная Kanban-доска в стиле Trello — быстро, адаптивно и без перезагрузок.
+            Полноценная Kanban-доска в стиле Trello — быстро, адаптивно и без
+            перезагрузок.
           </p>
         </div>
         <div className="header-actions">
@@ -350,6 +405,15 @@ export default function App() {
   );
 }
 
+type ColumnProps = {
+  column: Column;
+  onTitleChange: (columnId: string, value: string) => void;
+  onAddCard: (columnId: string) => void;
+  onRemoveColumn: (columnId: string) => void;
+  onRemoveCard: (columnId: string, cardId: string) => void;
+  onEditCard: (cardId: string) => void;
+};
+
 function Column({
   column,
   onTitleChange,
@@ -357,7 +421,7 @@ function Column({
   onRemoveColumn,
   onRemoveCard,
   onEditCard,
-}) {
+}: ColumnProps) {
   const {
     attributes,
     listeners,
@@ -366,7 +430,10 @@ function Column({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: column.id, data: { type: "column" } });
+  } = useSortable({
+    id: column.id,
+    data: { type: "column" satisfies DragData["type"] },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -412,7 +479,7 @@ function Column({
       >
         <div className="card-list" data-column={column.id}>
           {column.cards.map((card) => (
-            <Card
+            <CardItem
               key={card.id}
               card={card}
               columnId={column.id}
@@ -426,7 +493,14 @@ function Column({
   );
 }
 
-function Card({ card, columnId, onRemove, onEdit }) {
+type CardItemProps = {
+  card: Card;
+  columnId: string;
+  onRemove: () => void;
+  onEdit: () => void;
+};
+
+function CardItem({ card, columnId, onRemove, onEdit }: CardItemProps) {
   const {
     attributes,
     listeners,
@@ -437,7 +511,7 @@ function Card({ card, columnId, onRemove, onEdit }) {
     isDragging,
   } = useSortable({
     id: card.id,
-    data: { type: "card", columnId },
+    data: { type: "card" satisfies DragData["type"], columnId },
   });
 
   const style = {
@@ -511,10 +585,16 @@ function Card({ card, columnId, onRemove, onEdit }) {
   );
 }
 
-function CardModal({ card, onClose, onUpdate }) {
+type CardModalProps = {
+  card?: Card;
+  onClose: () => void;
+  onUpdate: (updater: (prev: Card) => Card) => void;
+};
+
+function CardModal({ card, onClose, onUpdate }: CardModalProps) {
   if (!card) return null;
 
-  const toggleLabel = (labelId) => {
+  const toggleLabel = (labelId: string) => {
     onUpdate((prev) => {
       const nextLabels = prev.labels.includes(labelId)
         ? prev.labels.filter((id) => id !== labelId)
@@ -523,7 +603,10 @@ function CardModal({ card, onClose, onUpdate }) {
     });
   };
 
-  const updateChecklistItem = (itemId, updater) => {
+  const updateChecklistItem = (
+    itemId: string,
+    updater: (prev: ChecklistItem) => ChecklistItem
+  ) => {
     onUpdate((prev) => ({
       ...prev,
       checklist: prev.checklist.map((item) =>
@@ -542,7 +625,7 @@ function CardModal({ card, onClose, onUpdate }) {
     }));
   };
 
-  const removeChecklistItem = (itemId) => {
+  const removeChecklistItem = (itemId: string) => {
     onUpdate((prev) => ({
       ...prev,
       checklist: prev.checklist.filter((item) => item.id !== itemId),
@@ -551,10 +634,7 @@ function CardModal({ card, onClose, onUpdate }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div className="modal" onClick={(event) => event.stopPropagation()}>
         <header className="modal-header">
           <div>
             <p className="eyebrow">Карточка</p>
@@ -605,7 +685,7 @@ function CardModal({ card, onClose, onUpdate }) {
                     "label-pill",
                     card.labels.includes(label.id) && "active"
                   )}
-                  style={{ "--label-color": label.color }}
+                  style={{ "--label-color": label.color } as React.CSSProperties }
                   onClick={() => toggleLabel(label.id)}
                 >
                   {label.name}
@@ -664,7 +744,11 @@ function CardModal({ card, onClose, onUpdate }) {
   );
 }
 
-function ColumnPreview({ title }) {
+type ColumnPreviewProps = {
+  title?: string;
+};
+
+function ColumnPreview({ title }: ColumnPreviewProps) {
   return (
     <div className="column preview">
       <h3 className="preview-title">{title}</h3>
@@ -673,7 +757,11 @@ function ColumnPreview({ title }) {
   );
 }
 
-function CardPreview({ card }) {
+type CardPreviewProps = {
+  card: Card;
+};
+
+function CardPreview({ card }: CardPreviewProps) {
   return (
     <div className="card preview">
       <div className="card-labels">
