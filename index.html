@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlowBoard — мобильная Kanban-доска</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app__header">
+      <div>
+        <h1>FlowBoard</h1>
+        <p class="app__subtitle">Бесшовная kanban-доска без перезагрузки</p>
+      </div>
+      <button class="btn btn--primary" id="add-column">+ Колонка</button>
+    </header>
+
+    <main class="board" id="board" aria-live="polite"></main>
+  </div>
+
+  <template id="column-template">
+    <section class="column" data-column>
+      <header class="column__header">
+        <div class="column__title" contenteditable="true" spellcheck="false"></div>
+        <div class="column__actions">
+          <button class="icon-btn" data-add-card aria-label="Добавить карточку">＋</button>
+          <button class="icon-btn" data-remove-column aria-label="Удалить колонку">×</button>
+        </div>
+      </header>
+      <div class="column__list" data-cards></div>
+    </section>
+  </template>
+
+  <template id="card-template">
+    <article class="card" data-card>
+      <div class="card__content" contenteditable="true" spellcheck="false"></div>
+      <button class="icon-btn card__delete" data-remove-card aria-label="Удалить карточку">×</button>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+:root {
+  color-scheme: light;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  --bg: #f4f6fb;
+  --panel: #ffffff;
+  --accent: #4f46e5;
+  --accent-strong: #4338ca;
+  --text: #0f172a;
+  --muted: #64748b;
+  --card: #f8fafc;
+  --border: #e2e8f0;
+  --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px clamp(16px, 4vw, 32px) 48px;
+}
+
+.app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: clamp(28px, 4vw, 40px);
+}
+
+.app__subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.btn--primary:active {
+  transform: scale(0.98);
+  background: var(--accent-strong);
+}
+
+.board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 1fr);
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+}
+
+.column {
+  background: var(--panel);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  scroll-snap-align: start;
+  border: 1px solid var(--border);
+}
+
+.column__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.column__title {
+  font-weight: 700;
+  font-size: 18px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  outline: none;
+}
+
+.column__title:focus {
+  background: #eef2ff;
+}
+
+.column__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-btn {
+  border: none;
+  background: #eef2ff;
+  color: var(--accent);
+  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.column__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 60px;
+}
+
+.card {
+  position: relative;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 14px 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  cursor: grab;
+  touch-action: none;
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.card__content {
+  outline: none;
+  min-height: 24px;
+  line-height: 1.4;
+}
+
+.card__content:empty::before {
+  content: "Новая задача";
+  color: var(--muted);
+}
+
+.card__delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+}
+
+.card--dragging {
+  position: fixed;
+  z-index: 1000;
+  width: 260px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.column__list--highlight {
+  outline: 2px dashed #c7d2fe;
+  border-radius: 12px;
+}
+
+@media (max-width: 768px) {
+  .app {
+    padding: 16px 16px 32px;
+  }
+
+  .board {
+    grid-auto-columns: 85vw;
+  }
+
+  .column {
+    min-height: 260px;
+  }
+}
